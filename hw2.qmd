@@ -60,31 +60,6 @@ random_walk3(1000)
 ```
 
 #### Version 1: for-loop
-
-```{r}
-random_walk1 <- function(n) {
-  position <- 0
-  for (i in 1:n) {
-    # decide + or -
-    direction <- sample(c(1, -1), 1)
-    
-    #when +, 5% change to 10
-    if (direction == 1) {
-      step <- sample(c(1, 10), 1, prob = c(0.95, 0.05))
-    } 
-    
-    #when -, 20% change to -3
-    else {
-      step <- sample(c(-1, -3), 1, prob = c(0.8, 0.2))
-    }
-    position <- position + step
-  }
-  return(position)
-}
-```
-
-#### Version 2: vectorized functions (no loops)
-
 We can calculate the overall probability of each of the four possible outcomes:
 
 $$
@@ -95,6 +70,18 @@ P(-1) &= P(\text{negative direction}) \times P(-1 \mid \text{negative}) = 0.5 \t
 P(-3) &= P(\text{negative direction}) \times P(-3 \mid \text{positive}) = 0.5 \times 0.20 = 0.1
 \end{aligned}
 $$
+```{r}
+random_walk1 <- function(n) {
+  position <- 0
+  for (i in 1:n) {
+    step <- sample(c(1, 10, -1, -3), 1, prob = c(0.475, 0.025, 0.4, 0.1))
+    position <- position + step
+  }
+  return(position)
+}
+```
+
+#### Version 2: vectorized functions (no loops)
 
 ```{r}
 random_walk2 <- function(n) {
@@ -112,20 +99,15 @@ random_walk2 <- function(n) {
 
 ```{r}
 random_walk3 <- function(n) {
-  next_step <- function(dummy_var) {
-    direction <- sample(c(1, -1), 1)
-    if (direction == 1) {
-      return(sample(c(1, 10), 1, prob = c(0.95, 0.05)))
-    } else {
-      return(sample(c(-1, -3), 1, prob = c(0.80, 0.20)))
-    }
+  #parameter 'dummy' is not used, just a placeholder for vapply
+  step <- function(dummy) {
+    sample(c(1, 10, -1, -3), 1, prob = c(0.475, 0.025, 0.4, 0.1))
   }
   
-  # Use vapply with numeric(1) as the expected return type
-  all_steps <- vapply(1:n, next_step, numeric(1))
+  # Use vapply to repeat the step function n times
+  all_steps <- vapply(1:n, step, numeric(1))
   
-  final_position <- sum(all_steps)
-  return(final_position)
+  sum(all_steps)
 }
 ```
 
@@ -145,7 +127,13 @@ random_walk3(1000)
 Demonstrate that the three versions can give the same result.Show this for both `n=10` and `n=1000`. (You will need to add a way to control the randomization.)
 
 ```{r}
+set.seed(1); random_walk1(10)
+set.seed(1); random_walk2(10)
+set.seed(1); random_walk3(10)
 
+set.seed(1); random_walk1(1000)
+set.seed(1); random_walk2(1000)
+set.seed(1); random_walk3(1000)
 
 ```
 
