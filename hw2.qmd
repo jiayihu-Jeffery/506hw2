@@ -157,7 +157,7 @@ What is the probability that the random walk ends at 0 if the number of steps is
 
 ```
 
-## Problem 2 - Mean of Mixture of Distributions 
+## Problem 2 - Mean of Mixture of Distributions
 
 The number of cars passing an intersection is a classic example of a Poisson distribution. At a particular intersection, Poisson is an appropriate distribution most of the time, but during rush hours (hours of 8am and 5pm) the distribution is really normally distributed with a much higher mean.
 
@@ -176,7 +176,7 @@ Accomplish this **without using any loops**.
 
 ```
 
-## Problem 3 - Linear Regression 
+## Problem 3 - Linear Regression
 
 Use the following code to download the YouTube Superbowl commercials data:
 
