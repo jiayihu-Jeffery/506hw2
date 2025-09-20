@@ -146,6 +146,7 @@ Demonstrate that the three versions can give the same result.Show this for both 
 
 ```{r}
 
+
 ```
 
 ### c.
