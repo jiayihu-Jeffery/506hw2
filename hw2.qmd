@@ -60,6 +60,7 @@ random_walk3(1000)
 ```
 
 #### Version 1: for-loop
+
 We can calculate the overall probability of each of the four possible outcomes:
 
 $$
@@ -70,6 +71,7 @@ P(-1) &= P(\text{negative direction}) \times P(-1 \mid \text{negative}) = 0.5 \t
 P(-3) &= P(\text{negative direction}) \times P(-3 \mid \text{positive}) = 0.5 \times 0.20 = 0.1
 \end{aligned}
 $$
+
 ```{r}
 random_walk1 <- function(n) {
   position <- 0
