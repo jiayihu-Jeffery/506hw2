@@ -144,7 +144,30 @@ set.seed(1); random_walk3(1000)
 Use the **microbenchmark** package to clearly demonstrate the speed of the implementations.Compare performance with a low input (1,000) and a large input (100,000). Discuss the results.
 
 ```{r}
+library(microbenchmark)
+library(ggplot2)
 
+# Compare performance for n = 1,000
+mb_small <- microbenchmark(
+  loop      = random_walk1(1000),
+  vector    = random_walk2(1000),
+  vapply_fn = random_walk3(1000),
+  times = 100L
+)
+
+# Compare performance for n = 100,000
+mb_large <- microbenchmark(
+  loop      = random_walk1(100000),
+  vector    = random_walk2(100000),
+  vapply_fn = random_walk3(100000),
+  times = 20L
+)
+
+print(mb_small)
+print(mb_large)
+
+autoplot(mb_small)
+autoplot(mb_large)
 
 ```
 
