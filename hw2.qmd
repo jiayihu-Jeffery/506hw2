@@ -152,15 +152,15 @@ mb_small <- microbenchmark(
   loop      = random_walk1(1000),
   vector    = random_walk2(1000),
   vapply_fn = random_walk3(1000),
-  times = 100L
+  times = 100
 )
 
-# Compare performance for n = 100,000
+# change 100 times to 20 times for n = 100,000 to reduce computation time
 mb_large <- microbenchmark(
   loop      = random_walk1(100000),
   vector    = random_walk2(100000),
   vapply_fn = random_walk3(100000),
-  times = 20L
+  times = 20
 )
 
 print(mb_small)
@@ -176,7 +176,22 @@ autoplot(mb_large)
 What is the probability that the random walk ends at 0 if the number of steps is 10? 100? 1000? Defend your answers with evidence based upon a Monte Carlo simulation.
 
 ```{r}
+#set MCMC times
+n <- 100000
 
+#use random_walk2 for MCMC simulation
+random_walk2_MCMC10 <- replicate(n, random_walk2(10))
+random_walk2_MCMC100 <- replicate(n, random_walk2(100))
+random_walk2_MCMC1000 <- replicate(n, random_walk2(1000))
+
+#calculate the probability
+Prob10 = sum(random_walk2_MCMC10 == 0) /n
+Prob100 = sum(random_walk2_MCMC100 == 0) /n
+Prob1000 = sum(random_walk2_MCMC1000 == 0) /n
+
+print(Prob10)
+print(Prob100)
+print(Prob1000)
 
 ```
 
@@ -196,6 +211,25 @@ Accomplish this **without using any loops**.
 (Hint: This can be done with extremely minimal code.)
 
 ```{r}
+M <- 1000000
+sigma_rush <- sqrt(12)
+
+# Create a matrix where each row is a day and each column is an hour
+X <- cbind(
+  matrix(rpois(M * 8, 1),  M, 8),# 0–7h, first creat a vectir of 8M elements, then convert it to a M*8 matrix
+  round(pmax(0, rnorm(M, 60, sigma_rush))),  # 8h, round and pmax to ensure non-negative integers
+  matrix(rpois(M * 8, 8),  M, 8),# 9–16h
+  round(pmax(0, rnorm(M, 60, sigma_rush))), # 17h
+  matrix(rpois(M * 6, 12), M, 6) # 18–23h
+)
+
+head(X)
+
+# Sum across each row to get total cars per day
+daily_totals <- rowSums(X)
+
+# Calculate the mean number of cars per day out of M days
+mean(daily_totals)
 
 ```
 
@@ -216,6 +250,31 @@ Often in data analysis, we need to [de-identify](https://en.wikipedia.org/wiki/D
 Report the dimensions of the data after removing these columns.
 
 ```{r}
+youtube <- read.csv(
+  "https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-03-02/youtube.csv"
+)
+
+#names(youtube)
+
+# Remove identifying columns
+youtube_deid <- subset(
+  youtube,
+  select = -c(
+    brand, # brand name, directly reveals ad identity
+    superbowl_ads_dot_com_url, # unique URL to original ad page
+    youtube_url, # unique YouTube video link
+    id, # unique YouTube video identifier
+    published_at, # exact publish time, can identify ad
+    title, # ad title, usually unique
+    description, # ad description, often unique
+    thumbnail, # thumbnail URL, can uniquely identify video
+    channel_title # YouTube channel name, links to advertiser
+  )
+)
+
+
+#head(youtube_deid)
+dim(youtube_deid)
 
 ```
 
@@ -233,7 +292,118 @@ For each variable, report which category it falls in. If it requires a transform
 
 (Hint: At least the majority of these variables are appropriate to use.)
 
+**we first draw the histograms of these variables to examine their distributions.**
+
 ```{r}
+#we first draw the histograms of these variables to examine their distributions.
+library(ggplot2)
+library(patchwork)
+
+# Variables to check
+vars <- c("view_count", "like_count", "dislike_count", "favorite_count", "comment_count")
+
+# Create histograms for each variable
+plots <- lapply(vars, function(v) {
+  ggplot(youtube, aes_string(x = v)) +
+    geom_histogram(bins = 30, fill = "steelblue", color = "white") +
+    scale_x_continuous(labels = scales::comma) +
+    labs(title = v, x = NULL, y = "Frequency") +
+    theme_minimal()
+})
+
+# Combine plots into a grid
+final_plot <- wrap_plots(plots, ncol = 3, nrow = 2) +
+  plot_annotation(
+    title = "Distributions of YouTube Engagement Metrics",
+    theme = theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+  )
+
+final_plot
+```
+
+**we then change the x_limits to get a better plot**
+
+```{r}
+#we then change the x_limits to get a better plot
+x_limits <- list(
+  c(0, 250000),  # view_count
+  c(0, 1000),      # like_count
+  c(0, 50),        # dislike_count
+  NULL,             # favorite_count
+  c(0, 100)         # comment_count
+)
+
+plots_zoom <- lapply(seq_along(vars), function(i) {
+  v <- vars[i]
+  lims <- x_limits[[i]]
+  
+  p <- ggplot(youtube, aes_string(x = v)) +
+    geom_histogram(bins = 30, fill = "steelblue", color = "white")
+  
+  if (!is.null(lims)) {
+    p <- p + scale_x_continuous(limits = lims, labels = scales::comma)
+    title_range <- paste0(" (", format(lims[1], big.mark = ","), "-", format(lims[2], big.mark = ","), ")")
+  } else {
+    title_range <- " (full range)"
+  }
+  
+  p +
+    labs(title = paste0(v, title_range),
+         x = NULL, y = "Frequency") +
+    theme_minimal()
+})
+
+# 
+final_zoom_plot <- wrap_plots(plots_zoom, ncol = 3, nrow = 2) +
+  plot_annotation(
+    title = "Zoomed-in Distributions (Custom Ranges)",
+    theme = theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+  )
+
+final_zoom_plot
+```
+
+```{r}
+library(dplyr)
+
+# Based on the histograms (full range and zoomed-in):
+# 1. View counts: Highly right-skewed, large range -> (ii) Needs transformation
+# 2. Like counts: Highly right-skewed, large range -> (ii) Needs transformation
+# 3. Dislike counts: Right-skewed, many zeros -> (ii) Needs transformation
+# 4. Favorite counts: Constant (all zero) -> (iii) Not appropriate
+# 5. Comment counts: Right-skewed, many zeros -> (ii) Needs transformation
+
+# ---- Apply transformations going forward ----
+youtube_deid <- youtube_deid %>%
+  mutate(
+    # log1p(x) = log(1 + x) handles zeros safely
+    log_views    = log1p(view_count),     # (ii) Transform
+    log_likes    = log1p(like_count),     # (ii) Transform
+    log_dislikes = log1p(dislike_count),  # (ii) Transform
+    log_comments = log1p(comment_count)   # (ii) Transform
+    # favorite_count is excluded from modeling as outcome (iii)
+  )
+
+# ---- Final classification table ----
+classification <- data.frame(
+  Variable = c("View counts", "Like counts", "Dislike counts", "Favorite counts", "Comment counts"),
+  Category = c(
+    "ii) Needs transformation",
+    "ii) Needs transformation",
+    "ii) Needs transformation",
+    "iii) Not appropriate",
+    "ii) Needs transformation"
+  ),
+  Transformation = c(
+    "log1p(view_count)",
+    "log1p(like_count)",
+    "log1p(dislike_count)",
+    "N/A (constant)",
+    "log1p(comment_count)"
+  )
+)
+
+print(classification)
 
 ```
 
@@ -244,7 +414,59 @@ For each variable in part b. that are appropriate, fit a linear regression model
 Discuss the results. Identify the direction of any statistically significant results.
 
 ```{r}
+# Define the predictor variables
+predictors <- c("funny", "show_product_quickly", "patriotic", 
+                "celebrity", "danger", "animals", "use_sex", "year")
 
+# define the outcome variables
+outcomes <- c("log_views", "log_likes", "log_dislikes", "log_comments")
+
+# Fit model
+models <- lapply(outcomes, function(outcome) {
+  formula <- as.formula(
+    paste(outcome, "~", paste(predictors, collapse = " + "))
+  )
+  lm(formula, data = youtube_deid)
+})
+
+# Name the list for clarity
+names(models) <- outcomes
+
+lapply(models, summary)
+
+```
+
+**Discussion of Results (based on model summaries above):**
+
+```{r}
+
+# Discussion of Results (based on model summaries above):
+
+# 1. log_views:
+#    - No predictors statistically significant at p < 0.05.
+#    - Conclusion: Neither year nor ad characteristics explain
+#      variation in view counts after transformation.
+#
+# 2. log_likes:
+#    - year: Positive, significant (Estimate ≈ 0.07685, p ≈ 0.0157)
+#    - Conclusion: Likes have increased in more recent years,
+#      controlling for ad features.
+#
+# 3. log_dislikes:
+#    - year: Positive, significant (Estimate ≈ 0.09207, p ≈ 0.000626)
+#    - patriotic: Positive, marginal (p ≈ 0.0531)
+#    - Conclusion: Dislikes have increased over time; patriotic ads
+#      may receive slightly more dislikes (weak evidence).
+#
+# 4. log_comments:
+#    - No predictors significant at p < 0.05.
+#    - year: Positive, marginal (p ≈ 0.0571)
+#    - Conclusion: Weak evidence that comments have increased over time.
+#
+# Overall:
+#    - Year is the most consistent predictor, positively associated
+#      with likes, dislikes, and marginally comments.
+#    - No ad characteristic shows strong, consistent significance.
 ```
 
 ### d.
