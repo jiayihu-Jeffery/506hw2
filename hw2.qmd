@@ -5,12 +5,16 @@ format:
     code-tools: true
     highlight-style: github
     toc: true
-    toc-depth: 4
+    toc-depth: 3
 editor: visual
 theme: Zephyr
 ---
 
-## Problem 1 - Modified Random walk
+# Information 
+
+**the Github website for this homework is https://github.com/jiayihu-Jeffery/506hw2**
+
+# Problem 1 - Modified Random walk
 
 Consider a 1-dimensional random walk with the following rules:
 
@@ -40,7 +44,7 @@ The input and output should be:
 
 We’re going to implement this in different ways and compare them.
 
-### a.
+## a.
 
 Implement the random walk in these three versions:
 
@@ -59,7 +63,7 @@ random_walk2(1000)
 random_walk3(1000)
 ```
 
-#### Version 1: for-loop
+### Version 1: for-loop
 
 We can calculate the overall probability of each of the four possible outcomes:
 
@@ -83,7 +87,7 @@ random_walk1 <- function(n) {
 }
 ```
 
-#### Version 2: vectorized functions (no loops)
+### Version 2: vectorized functions (no loops)
 
 ```{r}
 random_walk2 <- function(n) {
@@ -97,7 +101,7 @@ random_walk2 <- function(n) {
 
 ```
 
-#### Version 3: vapply (professor said it's safest apply function)
+### Version 3: vapply (professor said it's safest apply function)
 
 ```{r}
 random_walk3 <- function(n) {
@@ -113,7 +117,7 @@ random_walk3 <- function(n) {
 }
 ```
 
-#### Demonstration
+### Demonstration
 
 ```{r}
 random_walk1(10)
@@ -124,11 +128,12 @@ random_walk2(1000)
 random_walk3(1000)
 ```
 
-### b.
+## b.
 
 Demonstrate that the three versions can give the same result.Show this for both `n=10` and `n=1000`. (You will need to add a way to control the randomization.)
 
 ```{r}
+# using setseed to control the randomization
 set.seed(1); random_walk1(10)
 set.seed(1); random_walk2(10)
 set.seed(1); random_walk3(10)
@@ -139,7 +144,7 @@ set.seed(1); random_walk3(1000)
 
 ```
 
-### c.
+## c.
 
 Use the **microbenchmark** package to clearly demonstrate the speed of the implementations.Compare performance with a low input (1,000) and a large input (100,000). Discuss the results.
 
@@ -171,7 +176,7 @@ autoplot(mb_large)
 
 ```
 
-### d.
+## d.
 
 What is the probability that the random walk ends at 0 if the number of steps is 10? 100? 1000? Defend your answers with evidence based upon a Monte Carlo simulation.
 
@@ -195,7 +200,7 @@ print(Prob1000)
 
 ```
 
-## Problem 2 - Mean of Mixture of Distributions
+# Problem 2 - Mean of Mixture of Distributions
 
 The number of cars passing an intersection is a classic example of a Poisson distribution. At a particular intersection, Poisson is an appropriate distribution most of the time, but during rush hours (hours of 8am and 5pm) the distribution is really normally distributed with a much higher mean.
 
@@ -233,7 +238,7 @@ mean(daily_totals)
 
 ```
 
-## Problem 3 - Linear Regression
+# Problem 3 - Linear Regression
 
 Use the following code to download the YouTube Superbowl commercials data:
 
@@ -243,7 +248,7 @@ youtube <- read.csv('https://raw.githubusercontent.com/rfordatascience/tidytuesd
 
 Information about this data can be found at <https://github.com/rfordatascience/tidytuesday/tree/main/data/2021/2021-03-02>. The research question for this project is to decide which of several attributes, if any, is associated with increased YouTube engagement metrics.
 
-### a.
+## a.
 
 Often in data analysis, we need to [de-identify](https://en.wikipedia.org/wiki/De-identification) it. This is more important for studies of people, but let’s carry it out here. Remove any column that might uniquely identify a commercial. This includes but isn’t limited to things like brand, any URLs, the YouTube channel, or when it was published.
 
@@ -278,7 +283,7 @@ dim(youtube_deid)
 
 ```
 
-### b.
+## b.
 
 For each of the following variables, examine their distribution. Determine whether i) The variable could be used as is as the outcome in a linear regression model, ii) The variable can use a transformation prior to being used as the outcome in a linear regression model, or iii) The variable would not be appropriate to use as the outcome in a linear regression model.
 
@@ -407,7 +412,7 @@ print(classification)
 
 ```
 
-### c.
+## c.
 
 For each variable in part b. that are appropriate, fit a linear regression model predicting them based upon each of the seven binary flags for characteristics of the ads, such as whether it is funny. Control for year as a continuous covariate.
 
@@ -469,10 +474,51 @@ lapply(models, summary)
 #    - No ad characteristic shows strong, consistent significance.
 ```
 
-### d.
+## d.
 
 Consider only the outcome of view counts. Calculate \\(\\hat{\\beta}\\) manually (without using `lm`) by first creating a proper design matrix, then using matrix algebra to estimate \\(\\beta\\). Confirm that you get the same result as `lm` did in part c.
 
-```{r}
+```         
+In this problem, I applied the QR decomposition method learned in STATS 600, Lab 2.
 
+This approach offers two significant advantages over the standard normal equation method, which relies on calculating $(X^T X)^{-1}$:
+
+Improved Computational Efficiency: The complexity is reduced from $O(p^3)$ to $O(np^2)$, making it much faster for datasets with many predictors.
+
+Enhanced Numerical Stability: It avoids the explicit calculation of $(X^T X)^{-1}$, which can be inaccurate or fail completely if the matrix is ill-conditioned (i.e., has high multicollinearity).
+```
+
+![](images/clipboard-2575191653.png)
+
+```{r}
+# define variables
+response_var <- "log_views"
+predictor_vars <- c("funny", "show_product_quickly", "patriotic", 
+                    "celebrity", "danger", "animals", "use_sex", "year")
+all_model_vars <- c(response_var, predictor_vars)
+
+# using na.omit to remove rows with any NA in the relevant columns
+youtube_clean <- na.omit(youtube_deid[, all_model_vars])
+
+y <- youtube_clean$log_views
+X <- as.matrix(cbind(intercept = 1, youtube_clean[, predictor_vars]))
+
+
+# using QR decomposition to solve for beta_hat
+qr_decomposition <- qr(X)
+
+Q <- qr.Q(qr_decomposition)
+R <- qr.R(qr_decomposition)
+
+
+# Calculate beta_hat using the QR components
+beta_hat_qr <- solve(R) %*% t(Q) %*% y
+
+# Compare with lm results
+results <- cbind(
+  Manual_QR = beta_hat_qr, 
+  LM_Function = coef(models$log_views)
+)
+
+print(results)
 ```
